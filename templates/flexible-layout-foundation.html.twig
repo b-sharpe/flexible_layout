@@ -1,0 +1,9 @@
+<div class="flexible-layout flexible-layout-foundation">
+  {% for key,value in content %}
+    <div class="flexible-layout-region">
+      {% if 'region_' in key  %}
+        {{ value }}
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
