@@ -1,0 +1,31 @@
+.flb {
+  margin: 0 auto;
+  padding: 10px;
+  min-width: 500px;
+}
+
+.flb-column,
+.flb-row {
+  background: #f7fbfd;
+  border: 1px solid #9dcccc;
+  min-height: 20px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.flb-column:hover,
+.flb-row:hover {
+  background: #c9dce4;
+}
+
+.flb-row {
+  color: black;
+  padding: 5px;
+  transition: .2s;
+}
+
+.flb-column .name,
+.flb-row .name {
+  display: block;
+  width: 100%;
+}

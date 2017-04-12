@@ -1,9 +1,11 @@
+{% macro addRegion(settings, content) %}
+  <div class="{{ settings.classes }}">
+    {{ attribute(content, settings.machine_name) }}
+    {% for child in settings.children %}
+      {{ _self.addRegion(child, content) }}
+    {% endfor %}
+  </div>
+{% endmacro %}
 <div class="flexible-layout flexible-layout-foundation">
-  {% for key,value in content %}
-    <div class="flexible-layout-region">
-      {% if 'region_' in key  %}
-        {{ value }}
-      {% endif %}
-    </div>
-  {% endfor %}
+  {{ _self.addRegion(settings.layout, content) }}
 </div>

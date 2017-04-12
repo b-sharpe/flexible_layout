@@ -2,7 +2,7 @@
 
 namespace Drupal\flexible_layout\Plugin\Layout;
 
-use Drupal\Component\Utility\NestedArray;
+use Drupal\Component\Serialization\Json;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\layout_plugin\Plugin\Layout\LayoutBase;
 
@@ -16,8 +16,7 @@ class FlexibleLayout extends LayoutBase {
    */
   public function defaultConfiguration() {
     return [
-      'num_regions' => 1,
-      'rows' => [],
+      'layout' => [],
     ];
   }
 
@@ -26,37 +25,15 @@ class FlexibleLayout extends LayoutBase {
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
     $form = parent::buildConfigurationForm($form, $form_state);
-
-    $form['num_regions'] = [
+    $form['container']['#markup'] = '<div class="flexible-layout-container"></div>';
+    $layout = !empty($this->configuration['layout']) ? $this->configuration['layout'] : [];
+    $form['layout'] = [
       '#type' => 'textfield',
-      '#title' => 'Number of regions',
-      '#default_value' => $this->configuration['num_regions'],
-    ];
-    $form['wrapper'] = [
-      '#type' => 'container',
+      '#default_value' => Json::encode($layout),
+      '#maxlength' => 1000000000,
       '#attributes' => [
-        'id' => 'flexible-layout-form-wrapper',
-      ],
-    ];
-    $rows = !empty($this->configuration['rows']) ? $this->configuration['rows'] : [];
-    foreach ($rows as $i => $row) {
-      $form['wrapper'][] = [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['flexible-layout-form-row']],
-        ['#markup' => 'Row ' . $i],
-      ];
-    }
-    $form['wrapper']['add_row'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Add row'),
-      '#ajax' => [
-        'callback' => [self::class, 'addRowAjax'],
-        'wrapper' => 'flexible-layout-form-wrapper',
-        'method' => 'replace',
-      ],
-      '#attributes' => [
-        'class' => ['flexible-layout-form-add-row'],
-      ],
+        'class' => ['flexible-layout-json-field', 'visually-hidden'],
+      ]
     ];
     $form['#attached']['library'][] = 'flexible_layout/form';
     return $form;
@@ -66,20 +43,26 @@ class FlexibleLayout extends LayoutBase {
    * {@inheritdoc}
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    $this->configuration = $form_state->getValues();
+    $values = $form_state->getValues();
+    $this->configuration['layout'] = JSON::decode($values['layout']);
+  }
+
+  protected function getRegionsFromLayout($current) {
+    $regions = [];
+    $regions[$current['machine_name']] = [
+      'label' => $current['name'],
+    ];
+    foreach ($current['children'] as $column) {
+      $regions = array_merge($regions, $this->getRegionsFromLayout($column));
+    }
+    return $regions;
   }
 
   /**
    * {@inheritdoc}
    */
   public function getRegionDefinitions() {
-    $regions = [];
-    $num_regions = !empty($this->configuration['num_regions']) ? $this->configuration['num_regions'] : 1;
-    for ($i=0;$i<$num_regions;++$i) {
-      $regions['region_' . $i] = [
-        'label' => 'Region ' . $i,
-      ];
-    }
+    $regions = $this->getRegionsFromLayout($this->configuration['layout']);
     return $regions;
   }
 
@@ -94,13 +77,6 @@ class FlexibleLayout extends LayoutBase {
       $definition['region_names'][$region_id] = $region_definition['label'];
     }
     return $definition;
-  }
-
-  public static function addRowAjax(array $form, FormStateInterface $form_state) {
-    $trigger = $form_state->getTriggeringElement();
-    $parents = array_slice($trigger['#array_parents'], 0, -1);
-    $selection = NestedArray::getValue($form, $parents);
-    return $selection;
   }
 
 }
