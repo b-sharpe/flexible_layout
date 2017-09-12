@@ -1,0 +1,9 @@
+flexible_layout.layout:
+  path: '/admin/flexible_layout/layout/{machine_name}/{section}'
+  defaults:
+    _title: 'Configure'
+    _controller: '\Drupal\flexible_layout\Controller\FlexibleLayout::layoutForm'
+  requirements:
+    _permission: 'administer site configuration'
+  options:
+    _admin_route: TRUE

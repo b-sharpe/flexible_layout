@@ -5,7 +5,7 @@
   /**
    * Registers behaviours related to the flexible layout form.
    */
-  Drupal.behaviors.FileBrowserView = {
+  Drupal.behaviors.FlexibleLayout = {
     attach: function (context) {
       function getAddButton ($element, type) {
         var $add = $('<a href="#" class="button"></a>');
@@ -66,15 +66,10 @@
           if (depth > 0) {
             $dialog.append(getRemoveButton($element));
           }
-          $dialog.dialog({
-            modal: true,
-            position: {
-              my: 'right',
-              at: 'left',
-              of: $element
-            },
-            show: true
+          var modal = Drupal.dialog($dialog, {
+            resizable: false
           });
+          modal.showModal();
         });
       }
 

@@ -4,12 +4,15 @@ namespace Drupal\flexible_layout\Plugin\Layout;
 
 use Drupal\Component\Serialization\Json;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\layout_plugin\Plugin\Layout\LayoutBase;
+use Drupal\Core\Layout\LayoutDefault;
+use Drupal\Core\Plugin\PluginFormInterface;
+use Drupal\Core\Render\Element;
+use Drupal\Core\Url;
 
 /**
  * Provides a layout plugin with dynamic theme regions.
  */
-class FlexibleLayout extends LayoutBase {
+class FlexibleLayout extends LayoutDefault implements PluginFormInterface {
 
   /**
    * {@inheritdoc}
@@ -24,9 +27,31 @@ class FlexibleLayout extends LayoutBase {
    * {@inheritdoc}
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
-    $form = parent::buildConfigurationForm($form, $form_state);
-    $form['container']['#markup'] = '<div class="flexible-layout-container"></div>';
     $layout = !empty($this->configuration['layout']) ? $this->configuration['layout'] : [];
+    $layout = [];
+
+    $header = [
+      'type' => $this->t("Type"),
+      'name' => $this->t("Name"),
+      'classes' => $this->t("Classes"),
+      'actions' => $this->t("Actions"),
+    ];
+
+    $form['section_table'] = [
+      '#type' => 'table',
+      '#header' => $header,
+      '#empty' => $this->t('There are no items yet. <a class="use-ajax" href=":url">Add item</a>.', [':url' => Url::fromRoute('flexible_layout.layout', ['section' => 'default'])->toString()]),
+    ];
+
+    foreach (Element::children($layout) as $section) {
+      kint($section);
+    }
+
+
+    // Attach the library for pop-up dialogs/modals.
+    $form['#attached']['library'][] = 'core/drupal.dialog.ajax';
+
+
     $form['layout'] = [
       '#type' => 'textfield',
       '#default_value' => Json::encode($layout),
@@ -35,8 +60,13 @@ class FlexibleLayout extends LayoutBase {
         'class' => ['flexible-layout-json-field', 'visually-hidden'],
       ]
     ];
-    $form['#attached']['library'][] = 'flexible_layout/form';
     return $form;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
   }
 
   /**
@@ -47,13 +77,24 @@ class FlexibleLayout extends LayoutBase {
     $this->configuration['layout'] = JSON::decode($values['layout']);
   }
 
-  protected function getRegionsFromLayout($current) {
+  /**
+   * @param $current
+   *
+   * @return array
+   */
+  protected function getRegionsFromLayout($current, $prefix = '') {
     $regions = [];
-    $regions[$current['machine_name']] = [
-      'label' => $current['name'],
-    ];
+    if ($current['type'] != 'row') {
+      $regions[$current['machine_name']] = [
+        'label' => $prefix . $current['name'],
+      ];
+    }
+    else {
+      $prefix .= '- ';
+    }
+
     foreach ($current['children'] as $column) {
-      $regions = array_merge($regions, $this->getRegionsFromLayout($column));
+      $regions = array_merge($regions, $this->getRegionsFromLayout($column, $prefix));
     }
     return $regions;
   }
@@ -71,11 +112,7 @@ class FlexibleLayout extends LayoutBase {
    */
   public function getPluginDefinition() {
     $definition = $this->pluginDefinition;
-    $definition['region_names'] = [];
-    $definition['regions'] = $this->getRegionDefinitions();
-    foreach ($definition['regions'] as $region_id => $region_definition) {
-      $definition['region_names'][$region_id] = $region_definition['label'];
-    }
+    $definition->setRegions($this->getRegionDefinitions());
     return $definition;
   }
 

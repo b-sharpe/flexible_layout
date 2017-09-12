@@ -1,7 +1,7 @@
 flexible_layout_foundation:
   class: '\Drupal\flexible_layout\Plugin\Layout\FlexibleLayout'
-  label: Flexible Layout (Foundation)
+  label: Flexible Layout
   category: Flexible Layouts
-  template: templates/flexible-layout-foundation
+  template: templates/flexible-layout
   max_columns: 12
   regions: []
