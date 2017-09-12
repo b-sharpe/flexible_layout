@@ -4,19 +4,34 @@ namespace Drupal\flexible_layout\Plugin\Layout;
 
 use Drupal\Component\Serialization\Json;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\layout_plugin\Plugin\Layout\LayoutBase;
+use Drupal\Core\Layout\LayoutDefault;
+use Drupal\Core\Plugin\PluginFormInterface;
 
 /**
  * Provides a layout plugin with dynamic theme regions.
  */
-class FlexibleLayout extends LayoutBase {
+class FlexibleLayout extends LayoutDefault implements PluginFormInterface {
 
   /**
    * {@inheritdoc}
    */
   public function defaultConfiguration() {
     return [
-      'layout' => [],
+      'layout' => [
+        'row_1' => [
+          'name' => 'Wrapper',
+          'type' => 'row',
+          'classes' => '',
+          'children' => [
+            'column_1' => [
+              'name' => 'Content',
+              'type' => 'column',
+              'classes' => '',
+              'children' => [],
+            ],
+          ],
+        ],
+      ],
     ];
   }
 
@@ -24,19 +39,26 @@ class FlexibleLayout extends LayoutBase {
    * {@inheritdoc}
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
-    $form = parent::buildConfigurationForm($form, $form_state);
     $form['container']['#markup'] = '<div class="flexible-layout-container"></div>';
-    $layout = !empty($this->configuration['layout']) ? $this->configuration['layout'] : [];
+    $config = $this->getConfiguration();
+    $layout = $config['layout'];
+
     $form['layout'] = [
       '#type' => 'textfield',
       '#default_value' => Json::encode($layout),
       '#maxlength' => 1000000000,
       '#attributes' => [
         'class' => ['flexible-layout-json-field', 'visually-hidden'],
-      ]
+      ],
     ];
     $form['#attached']['library'][] = 'flexible_layout/form';
     return $form;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
   }
 
   /**
@@ -49,12 +71,24 @@ class FlexibleLayout extends LayoutBase {
 
   protected function getRegionsFromLayout($current) {
     $regions = [];
-    $regions[$current['machine_name']] = [
-      'label' => $current['name'],
-    ];
-    foreach ($current['children'] as $column) {
-      $regions = array_merge($regions, $this->getRegionsFromLayout($column));
+
+    foreach ($current as $machine_name => $item) {
+      if ($item['type'] == 'row') {
+
+      }
+      else {
+        $regions[$machine_name] = [
+          'label' => $item['name'],
+        ];
+      }
+
+
+      if (!empty($item['children'])) {
+        $regions = array_merge($regions, $this->getRegionsFromLayout($item['children']));
+      }
+
     }
+
     return $regions;
   }
 
@@ -71,11 +105,7 @@ class FlexibleLayout extends LayoutBase {
    */
   public function getPluginDefinition() {
     $definition = $this->pluginDefinition;
-    $definition['region_names'] = [];
-    $definition['regions'] = $this->getRegionDefinitions();
-    foreach ($definition['regions'] as $region_id => $region_definition) {
-      $definition['region_names'][$region_id] = $region_definition['label'];
-    }
+    $definition->setRegions($this->getRegionDefinitions());
     return $definition;
   }
 

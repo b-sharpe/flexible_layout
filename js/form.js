@@ -19,12 +19,14 @@
       }
 
       function getNameField ($element) {
-        var $name = $('<input name="flb-name" type="text" />');
+        var $container = $('<div class="form-item" />');
+        var $label = $('<label for="flb-name">' + Drupal.t('Name') + ':</label>');
+        var $name = $('<input class="form-text" name="flb-name" type="text" />');
         $name.val($element.children('.name').text());
         $name.keyup(function () {
           $element.children('.name').text($(this).val());
         });
-        return  $('<label for="flb-name">' + Drupal.t('Name') + '</label>').append($name);
+        return $container.append($label).append($name);
       }
 
       function getClasses ($element) {
@@ -32,12 +34,14 @@
       }
 
       function getClassesField ($element, type) {
-        var $classes = $('<input name="flb-classes" type="text" />');
+        var $container = $('<div class="form-item" />');
+        var $label = $('<label for="flb-classes">' + Drupal.t('Classes') + '</label>');
+        var $classes = $('<input class="form-text" name="flb-classes" type="text" />');
         $classes.val(getClasses($element));
         $classes.keyup(function () {
           $element.attr('class', $classes.val() + ' flb-' + type);
         });
-        return  $('<label for="flb-classes">' + Drupal.t('Classes') + '</label>').append($classes);
+        return $container.append($label).append($classes);
       }
 
       function getRemoveButton ($element) {
@@ -56,25 +60,22 @@
           event.preventDefault();
           event.stopPropagation();
           var $dialog = $('<div class="flb-dialog"></div>');
-          $dialog.attr('title', 'Configure ' + type);
           var depth  = $element.parents('.flb-row').length;
-          if (depth < 2) {
-            $dialog.append(getAddButton($element, type));
-          }
           $dialog.append(getNameField($element));
           $dialog.append(getClassesField($element, type));
+
           if (depth > 0) {
             $dialog.append(getRemoveButton($element));
           }
-          $dialog.dialog({
-            modal: true,
-            position: {
-              my: 'right',
-              at: 'left',
-              of: $element
-            },
-            show: true
+          if (depth < 2) {
+            $dialog.append(getAddButton($element, type));
+          }
+          var modal = Drupal.dialog($dialog, {
+            title: 'Configure ' + type,
+            minWidth: 320
           });
+          modal.showModal();
+
         });
       }
 
@@ -119,23 +120,29 @@
       }
 
       function serializeLayout ($element) {
-        var serializedLayout = {
+        var machine_name = $element.attr('data-machine-name');
+        var serializedLayout = {};
+
+        serializedLayout[machine_name] = {
           name: $element.children('.name').text(),
-          machine_name: $element.attr('data-machine-name'),
           classes: getClasses($element),
-          children: [],
+          children: {},
           type: $element.hasClass('flb-row') ? 'row' : 'column'
         };
         $element.children('.flb-column,.flb-row').each(function () {
-          serializedLayout.children.push(serializeLayout($(this)));
+          $.extend(serializedLayout[machine_name].children, serializeLayout($(this)));
         });
         return serializedLayout;
       }
 
       function unserializeLayout (settings, $element) {
-        var $child = settings.type === 'row' ? addRow($element, settings) : addColumn($element, settings);
-        for (var i in settings.children) {
-          unserializeLayout(settings.children[i], $child);
+        for (var i in settings) {
+          settings[i].machine_name = i;
+          var $child = settings[i].type === 'row' ? addRow($element, settings[i]) : addColumn($element, settings[i]);
+
+          if (!$.isEmptyObject(settings[i].children)) {
+            unserializeLayout(settings[i].children, $child);
+          }
         }
       }
 
@@ -153,7 +160,7 @@
           subtree: true
         });
         var layout = JSON.parse($jsonField.val());
-        if (typeof layout === 'object' && layout.name) {
+        if (typeof layout === 'object' && layout.row_1.name) {
           unserializeLayout(layout, $container);
         }
         else {

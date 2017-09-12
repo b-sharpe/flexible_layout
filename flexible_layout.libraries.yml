@@ -8,7 +8,7 @@ form:
   dependencies:
     - core/jquery
     - core/jquery.ui
-    - core/jquery.ui.dialog
     - core/jquery.ui.sortable
     - core/jquery.once
     - core/drupal
+    - core/drupal.dialog
